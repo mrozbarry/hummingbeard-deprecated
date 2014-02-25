@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>Hummingbeard</title>
+  <meta name="description" content="Hummingbeard: A Html/Javascript Chat Framework">
+  <meta name="author" content="MrBarrySoftware">
+
+  <link rel="stylesheet" href="css/hummingbeard.css">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+</head>
+
+<body>
+
+
+  <script type="text/javascript" src="js/hummingbeard.js"></script>
+  <script type="text/javascript">
+    var beardim = new HummingBeard({
+      bosh_service: 'http://mrbarry.com:5280/http-bind',
+      jabber_host: 'mrbarry.com',
+      username: 'test@localhost'
+    });
+    beardim.add_conversation( "mrbarry@mrbarry.com" );
+    beardim.add_conversation( "webuser1234@mrbarry.com" );
+    beardim.add_conversation( "webuser5678@mrbarry.com" );
+
+    for(var i=0; i < 20; i++)
+      beardim.add_message( "mrbarry@mrbarry.com", "Me", "some crazy message " + i );
+  </script>
+</body>
+</html>
