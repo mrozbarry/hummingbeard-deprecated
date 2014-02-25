@@ -1,4 +1,4 @@
 hummingbeard
 ============
 
-XMPP Framework inspired by [Hummingbeard](https://github.com/alagu/hummingbird)
+XMPP Framework inspired by [Hummingbird](https://github.com/alagu/hummingbird)
