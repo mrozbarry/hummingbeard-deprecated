@@ -20,7 +20,155 @@
     return a;
   }
 
+  // Make a unique id, handy for assigning beardvo widgets
+  function hummingbeard_guid() {
+    'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+      return v.toString(16);
+    });
+  }
+
   /* HummingBeard */
+
+  // Hummingbeard Conversation
+  window.HummingBeardvo = function( parent, options ) {
+
+    /*  */
+
+    this.hummingbeard = parent;
+    
+    var self = this;
+
+    this.options = hummingbeard_object_merge( {
+      id: hummingbeard_guid(),
+      name: 'New Conversation',
+      heading_minimizes: true,
+      focus_notifications: [],
+      blurred_notifications: [ "message" ],
+      hide_fn: function( conversation ) {
+        var classes = conversation.beardvo.className.split(' ');
+        for(var c=0; c < classes.length; c++) {
+          if ( classes[c] == "visible" ) {
+            classes.splice( c, 1 );
+            break;
+          }
+        }
+        classes.push( "hidden" );
+        conversation.beardvo.className = classes.join( ' ' );
+      },
+      show_fn: function( conversation ) {
+        var classes = conversation.beardvo.className.split(' ');
+        for(var c=0; c < classes.length; c++) {
+          if ( classes[c] == "hidden" ) {
+            classes.splice( c, 1 );
+            break;
+          }
+        }
+        classes.push( "visible" );
+        conversation.beardvo.className = classes.join( ' ' );
+      },
+      close_fn: function( conversation ) {
+        conversation.hummingbeard.beardbox.removeChild( beardvo );
+      }
+    }, options );
+
+    this.beardvo = window.document.createElement('div');
+    this.beardvo.className = parent.options.chat_dialog_class + " visible";
+    this.beardvo.setAttribute( "id", this.options.id );
+
+    // Header/Conversation title
+    var heading = window.document.createElement( 'span' );
+    heading.className = 'heading';
+    heading.innerHTML = this.options.name;
+
+    if ( this.options.heading_minimizes )
+    {
+      heading.onclick = function() {
+        var classes = self.beardvo.className.split(' ');
+        var isVisible = true;
+        for(var c=0; c < classes.length; c++) {
+          if ( classes[c] == "visible" ) isVisible = true;
+          else if ( classes[c] == "hidden" ) isVisible = false;
+        }
+        if ( isVisible ) self.options.hide_fn( self );
+        else self.options.show_fn( self );
+      }
+    }
+
+    // Close button in header
+    var close = window.document.createElement( 'span' );
+    close.className = 'close';
+    close.innerHTML = '&times;';
+    close.onclick = function() {
+      self.options.close_fn( self.beardvo );
+    };
+    heading.appendChild( close );
+
+    this.beardvo.appendChild( heading );
+
+    // Container element to put messages into
+    var container = window.document.createElement( 'div' );
+    container.className = 'container';
+    this.beardvo.appendChild( container );
+
+    // Input box for chatting
+    var input = window.document.createElement( 'input' );
+    input.className = 'talk';
+    input.setAttribute( 'placeholder', 'Type <enter> to send your message' );
+    // Handle pressing enter with text
+    input.onkeypress = function( keyevent ) {
+      var k = keyevent.keyCode ? keyevent.keyCode : keyevent.which;
+      var text = this.value;
+      if ( text.length )
+      {
+        if ( k == 13 )
+        {
+          self.add_message( "Me", text );
+          this.value = "";
+        }
+      }
+    };
+
+    this.beardvo.appendChild( input );
+
+    // Listen for adding messages to this conversation
+    this.beardvo.addEventListener( "hummingbeard.add_message", function(e){
+      var message = window.document.createElement( 'div' );
+      message.className = 'message';
+
+      var from = window.document.createElement( 'span' );
+      from.className = e.detail.parent.options.chat_message_author_class;
+      from.innerHTML = e.detail.from + ':&nbsp;';
+      message.appendChild( from );
+
+      var content = window.document.createTextNode( e.detail.message );
+      message.appendChild( content );
+      container.appendChild( message );
+
+      // Attempt to scroll or focus the last message
+      try {
+        container.scrollTop = container.scrollHeight;
+      } catch(e) {
+        message.focus();
+      }
+    });
+
+    this.hummingbeard.beardbox.appendChild( this.beardvo );
+
+    this.add_message = function( from, content ) {
+      var e = new CustomEvent( "hummingbeard.add_message", {
+        'detail': {
+          'parent': this.hummingbeard,
+          'conversation': this,
+          'from': from,
+          'message': content
+        }
+      });
+      this.beardvo.dispatchEvent( e );
+      return true;
+    };
+
+  };
 
   // Main object
   window.HummingBeard = function( options ) {
@@ -37,7 +185,8 @@
       chat_message_author_class: 'chat_message_author'
     }, options );
 
-    console.log( this.options );
+    /* A nice place to store those beardvos */
+    this.beardvos = [];
 
     /* Initialize the main document object */
 
@@ -46,76 +195,7 @@
     
     this.beardbox.addEventListener( "hummingbeard.add_conversation", function(e){
       // Add a new conversation to the beardbox
-      var beardvo = window.document.createElement('div');
-      beardvo.className = e.detail.parent.options.chat_dialog_class;
-      beardvo.setAttribute( "data-chatname", e.detail.chatname );
-
-      // Header/Conversation title
-      var heading = window.document.createElement( 'span' );
-      heading.className = 'heading';
-      heading.innerHTML = e.detail.username;
-
-      // Close button in header
-      var close = window.document.createElement( 'a' );
-      close.className = 'close';
-      close.innerHTML = '&times;';
-      close.onclick = function() {
-        if ( beardvo.style.display == 'block' || !beardvo.style.display ) beardvo.style.display = 'none';
-        else beardvo.style.display = 'block';
-      };
-      heading.appendChild( close );
-
-      beardvo.appendChild( heading );
-
-      // Container element to put messages into
-      var container = window.document.createElement( 'div' );
-      container.className = 'container';
-      beardvo.appendChild( container );
-
-      // Input box for chatting
-      var input = window.document.createElement( 'input' );
-      input.className = 'talk';
-      input.setAttribute( 'placeholder', 'Type <enter> to send your message' );
-      // Handle pressing enter with text
-      input.onkeypress = function( keyevent ) {
-        var k = keyevent.keyCode ? keyevent.keyCode : keyevent.which;
-        var text = this.value;
-        if ( text.length )
-        {
-          if ( k == 13 )
-          {
-            e.detail.parent.add_message( e.detail.username, "Me", text );
-            this.value = "";
-          }
-        }
-      };
-
-      beardvo.appendChild( input );
-
-      // Listen for adding messages to this conversation
-      beardvo.addEventListener( "hummingbeard.add_message", function(e){
-        var message = window.document.createElement( 'div' );
-        message.className = 'message';
-
-        var from = window.document.createElement( 'span' );
-        from.className = e.detail.parent.options.chat_message_author_class;
-        from.innerHTML = e.detail.from + ':&nbsp;';
-        message.appendChild( from );
-
-        var content = window.document.createTextNode( e.detail.message );
-        message.appendChild( content );
-        container.appendChild( message );
-
-        // Attempt to scroll or focus the last message
-        try {
-          container.scrollTop = container.scrollHeight;
-        } catch(e) {
-          message.focus();
-        }
-      });
-      
-      // Add the conversation to the beardbox (main container)
-      e.detail.parent.beardbox.appendChild( beardvo );
+      e.detail.parent.beardvos.push( new HummingBeardvo( e.detail.parent, {} ) );
     }, false);
     
     // Get ride of a conversation (user closes the conversation?)
@@ -127,7 +207,7 @@
 
     // Find an active conversation in the beardbox
     this.find_conversation = function( chatname ) {
-      if ( !user_target ) return null;
+      if ( !chatname ) return null;
       if ( this.beardbox.hasChildNodes() ) {
         var cache = this.beardbox.childNodes;
         for(var c=0; c < cache.length; c++) {
@@ -143,7 +223,7 @@
     };
 
     // Add a new conversation to the beardbox
-    this.add_conversation = function( chatname ) {
+    this.add_conversation = function( chatname, options ) {
       var e = new CustomEvent( "hummingbeard.add_conversation", { 'detail': { 'parent': this, 'chatname': chatname } } );
       this.beardbox.dispatchEvent( e );
     };
