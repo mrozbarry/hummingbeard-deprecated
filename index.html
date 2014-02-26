@@ -22,14 +22,13 @@
     var beardim = new HummingBeard({
       bosh_service: 'http://mrbarry.com:5280/http-bind',
       jabber_host: 'mrbarry.com',
-      username: 'test@localhost'
+      username: 'test@localhost',
+      debug: true
     });
-    beardim.add_conversation( "mrbarry@mrbarry.com" );
-    beardim.add_conversation( "webuser1234@mrbarry.com" );
-    beardim.add_conversation( "webuser5678@mrbarry.com" );
+    beardim.add_conversation( { 'id': 'sampleconvo' } );
+    console.log( beardim.beardvos );
 
-    for(var i=0; i < 20; i++)
-      beardim.add_message( "mrbarry@mrbarry.com", "Me", "some crazy message " + i );
+    beardim.find_conversation( 'sampleconvo' ).add_message( "BeardedWizard", "Welcome to HummingBeard" );
   </script>
 </body>
 </html>

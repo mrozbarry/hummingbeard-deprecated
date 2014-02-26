@@ -10,7 +10,7 @@ body
   position: fixed;
   bottom:0;
   left:0;
-  height:370px;
+  height:410px;
   width:100%;
 }
 
@@ -20,54 +20,68 @@ body
   margin:30px 10px;
   border-radius: 5px;
   border: 3px black solid;
-  width: 275px;
+  width: 340px;
   position: relative;
   overflow-y: hidden;
 }
 
 .chat_dialog.visible
 {
-  height: 320px;
+  height: 350px;
 }
 
 .chat_dialog.hidden
 {
-  height: 30px;
-  margin-top: 320px;
+  height: 32px;
+  margin-top: 350px;
 }
 
 .chat_dialog > .heading
 {
   display:block;
-  background-color: #972929;
+  background-color: black;
   color:white;
-  overflow-x:hidden;
+  overflow:hidden;
   text-overflow: ellipsis;
   padding: 5px 3px;
   cursor: pointer;
-  height: 20px;
+  height: 22px;
 }
 
-.chat_dialog > .heading > .close
+.chat_dialog > .close
 {
-  display: inline-block;
+  display: block;
   float: right;
+  padding: 5px 3px;
   width: 24px;
+  height: 19px;
   color: black;
   font-weight: bold;
   text-decoration: none;
   background-color: #A73939;
   text-align:center;
+  font-size: 16pt;
+  cursor: pointer;
+  border-bottom: 3px black solid;
+  border-left: 3px black solid;
+  line-height: 0.9em;
+}
+
+.chat_dialog.hidden > .close
+{
+  border-bottom: 0;
+  height: 22px;
+  line-height: 1.1em;
 }
 
 .chat_dialog.visible > .container
 {
   position:absolute;
   display:block;
-  width: 275px;
+  width: 340px;
   top: 32px;
   left: 0;
-  height: 255px;
+  height: 265px;
   overflow-y: auto;
 }
 
@@ -83,8 +97,8 @@ body
   display: block;
   bottom: 10px;
   left:50%;
-  width:80%;
-  margin-left: -40%;
+  width:90%;
+  margin-left: -45%;
   border:0;
   outline:0;
   border-bottom: 1px #efefef solid;
@@ -105,5 +119,4 @@ body
 .container > .message > .chat_message_author
 {
   font-weight: bold;
-  margin-right: 5px;
 }
