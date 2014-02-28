@@ -13,7 +13,7 @@ What dependencies are used?
 
 HummingBeard.js on it's own uses no dependencies.  I did this so you can plug it into your underscore, jquery, mootools, or what-have-you frameworks.  HummingBeard is designed to be light weight and fast.
 
-Now, you're likely not just using HummingBeard unless you're just doing a quick mock-up.  In the real world, you will have this connected to a driver, which may have some dependencies; for example, using XMPP will force you to use `strophe.js`.  I have purposefully used `strophe.js` not only because it's popular, but it also has no extra dependencies (no jquery or any such silliness).  When other drivers are built, they should always have little to no dependencies.  For more information, check the contributing section below.
+Now, you're likely not just using HummingBeard unless you're just doing a quick mock-up.  In the real world, you will have this connected to a driver, which may have some dependencies; for example, using XMPP will force you to use [`strophe.js`](https://github.com/strophe/strophejs).  I have purposefully used `strophe.js` not only because it's popular, but it also has no extra dependencies (no jquery or any such silliness).  When other drivers are built, they should always have little to no dependencies.  For more information, check the contributing section below.
 
 Host do I include it?
 ---------------------

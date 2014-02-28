@@ -79,8 +79,9 @@
     this.hummingbeardvo = parent;
 
     this.options = HummingBeardUtil.object_merge( {
+      type: 'message',
       userid: 'A user',
-      userid_suffix: ' says:',
+      userid_suffix: ' says: ',
       status: 'delivered',
       content: '<i>Blank message</i>',
       created_at: new Date(),
@@ -90,19 +91,17 @@
       debug: parent.options.debug
     }, options);
     
-    this.userid = userid;
-    this.content = content;
-    this.status = delivered ? "sent" : "pending";
-
     this.element = window.document.createElement( 'div' );
-    this.element.className = 'message';
+    this.element.className = this.options.type;
 
-    var from = window.document.createElement( 'span' );
-    from.className = e.detail.parent.options.chat_message_author_class;
-    from.innerHTML = e.detail.from + ':&nbsp;';
-    this.element.appendChild( from );
+    if ( this.options.type == 'message' ) {
+      var from = window.document.createElement( 'span' );
+      from.className = this.options.chat_message_author_class;
+      from.innerHTML = this.options.userid + this.options.userid_suffix;
+      this.element.appendChild( from );
+    }
 
-    var content = window.document.createTextNode( e.detail.message );
+    var content = window.document.createTextNode( this.options.content );
     this.element.appendChild( content );
 
     var self = this;
@@ -113,11 +112,23 @@
 
       if ( e.detail.parent.options.debug ) console.log( "update_status", e );
 
+      var now = new Date();
+      e.detail.parent.options.updated_at = now;
+      var timestr = now.getDay() + "/" + now.getMonth() + "/" + now.getYear() + " " + now.getHours() + ":" + now.getMinutes();
+      e.detail.parent.element.setAttribute( "data-status", "Message was " + e.detail.status + " at " + timestr );
     });
 
 
     this.update_status = function( delivery_status ) {
-      //
+      var e = new CustomEvent( "hummingbeard.update_status", {
+        'detail': {
+          'parent': this,
+          'status': delivery_status
+        }
+      });
+      this.element.dispatchEvent( e );
+      return true;
+
     };
 
     this.scroll_to = function() {
@@ -130,6 +141,7 @@
 
     this.hummingbeardvo.message_container.appendChild( this.element );
     if ( this.options.autoscroll ) this.scroll_to();
+    this.update_status( this.options.status );
   };
 
   /*
@@ -147,21 +159,21 @@
    *  show_fn:
    *  close_fn:
    */
-  window.HummingBeardvo = function( parent, options ) {
+  window.HummingBeard = function( options ) {
 
     /* The parent hummingbeard instance */
 
-    this.hummingbeard = parent;
-    
     var self = this;
 
-    this.options = HummingBeardUtil.object_merge( {
+    this.options = HummingBeardUtil.object_merge({
       id: HummingBeardUtil.guid(),
+      container: window.document.body,
       name: 'New Conversation',
+      connection: null,
+      chat_dialog_class: 'chat_dialog',
       header_minimizes: true,
-      chat_message_author_class: 'chat_message_author',
-      driver: null,
-      persist_state: parent.options.persist_state,
+      message_limit: 500,
+      message_drop: 250,
       hide_fn: function( conversation ) {
         HummingBeardUtil.remove_class( conversation.element, "visible" );
         HummingBeardUtil.add_class( conversation.element, "hidden" );
@@ -172,13 +184,17 @@
       },
       close_fn: function( conversation ) {
         console.log( conversation );
-        conversation.hummingbeard.element.removeChild( conversation.element );
+        conversation.options.container.removeChild( conversation.element );
       }
     }, options);
 
+    console.log( this.options );
+
+    this.messages = [];
+
     // Base element
     this.element = window.document.createElement('div');
-    this.element.className = parent.options.chat_dialog_class + " visible";
+    this.element.className = this.options.chat_dialog_class + " visible";
     this.element.setAttribute( "id", this.options.id );
 
     // Close button in header
@@ -195,6 +211,7 @@
     this.heading = window.document.createElement( 'span' );
     this.heading.className = 'heading';
     this.heading.innerHTML = this.options.name;
+    this.heading.setAttribute( "title", this.options.name );
 
     if ( this.options.header_minimizes )
     {
@@ -227,7 +244,15 @@
       {
         if ( k == 13 )
         {
-          self.add_message( "Me", text );
+          self.add_message({
+            type: 'message',
+            id: self.options.id,
+            userid: 'Me',
+            userid_suffix: ': ',
+            status: 'sent',
+            content: text,
+            chat_message_author_class: 'chat_message_author'
+          });
           this.value = "";
         }
       }
@@ -235,31 +260,19 @@
 
     this.element.appendChild( input );
 
-    // Listen for adding messages to this conversation
+    // Listen for new messages in this conversation
     this.element.addEventListener( "hummingbeard.message", function(e){
       // Because IE doesn't believe in standards
       e = e || window.event;
 
       if ( e.detail.parent.options.debug ) console.log( "message", e );
 
-      var message = window.document.createElement( 'div' );
-      message.className = 'message';
-
-      var from = window.document.createElement( 'span' );
-      from.className = e.detail.parent.options.chat_message_author_class;
-      from.innerHTML = e.detail.from + ':&nbsp;';
-      message.appendChild( from );
-
-      var content = window.document.createTextNode( e.detail.message );
-      message.appendChild( content );
-      e.detail.parent.message_container.appendChild( message );
-
-      // Attempt to scroll or focus the last message
-      try {
-        container.scrollTop = e.detail.parent.message_container.scrollHeight;
-      } catch(e) {
-        message.focus();
+      e.detail.parent.messages.push( new HummingBeardMsg( e.detail.parent, e.detail ) );
+      if ( e.detail.parent.messages.length >= e.detail.parent.options.message_limit )
+      {
+        e.detail.parent.message.splice( 0, e.detail.parent.options.message_drop );
       }
+
     });
 
     this.element.addEventListener( "hummingbeard.hide", function(e){
@@ -275,6 +288,8 @@
     this.element.addEventListener( "hummingbeard.close", function(e){
       if ( e.detail.parent.options.debug ) console.log( "close", e );
       e.detail.parent.options.close_fn( e.detail.parent );
+
+      // Do we need to do anything here?  probably not
     });
 
     this.element.addEventListener( "hummingbeard.rename", function(e){
@@ -282,19 +297,16 @@
       e.detail.parent.options.close_fn( e.detail.parent );
     });
 
-    this.hummingbeard.element.appendChild( this.element );
+    this.options.container.appendChild( this.element );
 
-    this.add_message = function( from, content ) {
+    this.add_message = function( options ) {
+      var self = this;
       var e = new CustomEvent( "hummingbeard.message", {
-        'detail': {
-          'parent': this,
-          'conversation': this,
-          'from': from,
-          'message': content
-        }
+        'detail': HummingBeardUtil.object_merge({
+          'parent': self
+        }, options)
       });
       this.element.dispatchEvent( e );
-      return true;
     };
 
     this.hide = function( ) {
@@ -340,79 +352,107 @@
 
   };
 
-  // Main object
-  window.HummingBeard = function( options ) {
+  /*
+   * HummingBeardConnection
+   *
+   * Deals with connecting to a service using an account, and relaying messages
+   *
+   */
+  window.HummingBeardConnection = function( driver, options ) {
+    
+    this.driver = driver;
 
-    /* Merge User and Default Options */
+    this.options = HummingBeardUtil.object_merge( {
+      id: HummingBeardUtil.guid(),
+      userid: null,
+      password: null,
+      default_hummingbeard_options: null
+    }, options);
+
+    this.chats = [];
+
+    this.relay = function( from, to, message ) {
+      console.log( "HummingBeardConnection.relay[stub]", "Please implement this function for correct behaviour" );
+    }
+
+    this.chat = function( participants ) {
+      if ( !participants ) return null;
+      if ( !Array.isArray( participants) ) return null;
+      //if ( participants.length == 1 && (participants[0] == this.options.userid ) ) return null;
+      var title = "Chatting with " + participants.join(', ');
+      var new_chat = {
+        hummingbeard: new HummingBeard(HummingBeardUtil.object_merge({
+          'userid': this.options.userid,
+          'name': title
+        }, this.options.default_hummingbeard_options)),
+        'participants': participants
+      };
+
+      var self = this;
+      new_chat.hummingbeard.element.addEventListener( "hummingbeard.message", function(e){
+        console.log( e.detail );
+        console.log( 'driver message hook', new_chat.participants );
+        if ( e.detail.type == 'message' && e.detail.status == 'sent' )
+          self.relay( self.options.userid, new_chat.participants, e.detail.content );
+      });
+
+      this.chats.push( new_chat );
+      return new_chat;
+    };
+
+  };
+
+  /*
+   * HummingBeardDriver
+   *
+   * All drivers should inherit this class.  This mostly deals with attaching the driver to a conversation, and managing persistence
+   *
+   */
+  window.HummingBeardDriver = function( options ) {
     
     this.options = HummingBeardUtil.object_merge( {
-      bosh_service: 'http://localhost:5280/http-bind',
-      jabber_host: 'localhost',
-      username: 'test@localhost',
-      active_chat_limit: 1,
-      chat_container_class: 'chat_container',
-      chat_dialog_class: 'chat_dialog',
-      chat_message_author_class: 'chat_message_author',
-      chat_heading_color: 'black',
-      debug: false,
-      persist_state: true
-    }, options );
+      /* Normally you'd want things here, like username and password */
+      persist_on: [ "navigation", "session_expired" ],
+      driver_name: 'unknown_driver',
+      driver_authors: ['unknown author'],
+      driver_version: 'unknown_version'
+    }, options);
 
-    /* A nice place to store those beardvos */
-    this.beardvos = [];
+    this.connections = [];
 
-    /* Initialize the main document object */
+    window.document.body.addEventListener( "hummingbeard.navigation", function(e){
+      if ( e.detail.parent.options.debug ) console.log( "navigation", e );
+      e.detail.parent.options.close_fn( e.detail.parent );
+    });
 
-    this.element = window.document.createElement('div');
-    this.element.className = this.options.chat_container_class;
-    
-    this.element.addEventListener( "hummingbeard.add_conversation", function(e){
-      // Add a new conversation to the element
-      if ( e.detail.parent.options.debug ) console.log( "add_conversation", this, e );
-      e.detail.parent.beardvos.push( new HummingBeardvo( e.detail.parent, e.detail.options ) );
-    }, false);
-    
-    // Get ride of a conversation (user closes the conversation?)
-    this.element.addEventListener( "hummingbeard.remove_conversation", function(e){
-      // Remove a conversation from the element
-      if ( e.detail.parent.options.debug ) console.log( "remove_conversation", this, e );
-      for(var c=0; c < detail.parent.beardvos.lenth; c++) {
-        if ( detail.parent.beardvos[c].beardvo.hasAttribute("id") ) {
-          if ( detail.parent.beardvos[c].beardvo.getAttribute( "id" ) == id ) {
-            var e = new CustomEvent( "hummingbeard.close", { 'detail': { 'parent': detail.parent.beardvos[c] } } );
-            this.element.dispatchEvent( e );
-            break;
-          }
-        }
-      }
-    }, false);
-    
-    window.document.body.appendChild( this.element );
+    this.connect_internal = function( options ) {
+      console.log( "HummingBeardDriver.connect_internal[stub]", "Please implement this function for correct behaviour" );
+    };
 
-    // Find an active conversation in the element
-    this.find_conversation = function( id ) {
-      if ( !id ) return null;
-      for(var c=0; c < this.beardvos.length; c++) {
-        if ( this.beardvos[c].element.hasAttribute("id") ) {
-          if ( this.beardvos[c].element.getAttribute( "id" ) == id ) return this.beardvos[c];
-        }
-      }
+    this.connect = function( options ) {
+      var new_connection = this.connect_internal( options );
+      this.connections.push( new_connection );
+      return new_connection;
+    };
+
+    this.find_connection = function( userid ) {
+      for(var c=0; c < this.connections.length; c++)
+        if ( this.connections[c].options.userid == userid ) return this.connections[c];
       return null;
-    };
+    }
 
-    // Add a new conversation to the element
-    this.add_conversation = function( options ) {
-      options.debug = this.options.debug;
-      var e = new CustomEvent( "hummingbeard.add_conversation", { 'detail': { 'parent': this, 'options': options } } );
-      this.element.dispatchEvent( e );
-    };
+  };
 
-    // Add a new conversation to the element
-    this.remove_conversation = function( id ) {
-      var e = new CustomEvent( "hummingbeard.remove_conversation", { 'detail': { 'parent': this, 'id': id } } );
-      this.element.dispatchEvent( e );
-    };
+  // Let hummingbeard know if we are navigating away from this page
+  window.onbeforeunload = function() {
+    var e = new CustomEvent( "hummingbeard.navigation", {
+      'detail': {
+        'parent': this
+      }
+    });
+    window.document.body.dispatchEvent( e );
 
+    return null;
   }
 
 })();
