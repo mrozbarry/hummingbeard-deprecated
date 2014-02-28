@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>Hummingbeard</title>
+  <meta name="description" content="Hummingbeard: A Html/Javascript Chat Framework">
+  <meta name="author" content="MrBarrySoftware, http://mrbarry.com/">
+
+  <link rel="stylesheet" href="css/hummingbeard.css">
+
+</head>
+
+<body>
+
+
+  <script type="text/javascript" src="js/hummingbeard.js"></script>
+  <script type="text/javascript" src="js/dummydriver.js"></script>
+  <script type="text/javascript">
+    window.onload = function() {
+
+      // Demo conversation (Standalone chat, not directed at anyone)
+      var demo_conversation = new HummingBeard({
+        name: 'Demo Conversation'
+      });
+
+      demo_conversation.add_message({
+        userid: "BeardedWizard",
+        is_local: false,
+        status: 'pushed',
+        content: "Welcome to HummingBeard, a Javascript Chat Framework"
+      });
+
+      var driver = new HummingBeardLocalDriver({
+        persist_on: ["navigation"]
+      });
+
+      var participants = [];
+      for(var i=1; i < 4; i++) {
+        var userid = 'User' + i.toString();
+        driver.connect( userid );
+        participants.push( userid );
+      }
+
+      var driver_connection = driver.connect( 'Demo' );
+      console.log( driver_connection.chat( participants ) );
+
+
+    }
+  </script>
+</body>
+</html>

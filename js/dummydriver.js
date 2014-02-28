@@ -92,21 +92,10 @@
 
       HummingBeardDriver.call( this, this.options );
 
-      // Create a DOM event relay
-      this.options.proxy.setAttribute( "id", "hummingbeard_localdriver_proxy" );
-      this.options.proxy.addEventListener( "hummingbeard.message", function(e){
-        var message = e.detail;
-        if ( (message.type == 'message') && (message.status == 'sent') ) {
-
-        }
-      });
-      window.document.body.appendChild( this.options.proxy );
-
-
       this.connect_internal = function( userid ) {
         return new HummingBeardLocalConnection(this, {
           'userid': userid,
-          default_hummingbeard_options: { 'debug': false }
+          default_hummingbeard_options: { 'debug': true }
         });
       }
 
